@@ -32,6 +32,7 @@ function App() {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
   const [appError, setAppError] = useState<string | null>(null);
+  const [copyMessage, setCopyMessage] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(true);
 
   // Check initial session and subscribe to auth changes
@@ -169,6 +170,7 @@ function App() {
     try {
       await navigator.clipboard.writeText(textToCopy);
       setAppError(null);
+      setCopyMessage(`Texto de ${label} copiado al portapapeles.`);
     } catch {
       setAppError(`No se pudo copiar el texto de ${label}.`);
     }
@@ -481,6 +483,12 @@ function App() {
             </button>
           </div>
         </div>
+
+        {copyMessage && (
+          <div className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+            {copyMessage}
+          </div>
+        )}
 
         {appError && (
           <div className="mb-6 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
