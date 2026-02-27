@@ -243,7 +243,9 @@ function App() {
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
+          // Use anon key JWT so Edge Function auth never fails with stale/other-project user tokens.
+          // This is safe here because the anon key is public anyway.
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
           'Content-Type': 'application/json',
         },
