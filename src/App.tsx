@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles, Loader2, Sun, Moon } from 'lucide-react';
 import ImageUpload from './components/ImageUpload';
 import AudioRecorder from './components/AudioRecorder';
 import TextInput from './components/TextInput';
@@ -32,6 +32,7 @@ function App() {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
   const [appError, setAppError] = useState<string | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState(true);
 
   // Check initial session and subscribe to auth changes
   useEffect(() => {
@@ -157,6 +158,20 @@ function App() {
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
+  };
+
+  const handleCopyToClipboard = async (textToCopy: string, label: string) => {
+    if (!textToCopy.trim()) {
+      setAppError(`No hay contenido para copiar de ${label}.`);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      setAppError(null);
+    } catch {
+      setAppError(`No se pudo copiar el texto de ${label}.`);
+    }
   };
 
   const decodeJwtPayload = (jwt: string): any | null => {
@@ -414,23 +429,57 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="flex items-center justify-between mb-8">
+    <div
+      className={
+        isDarkMode
+          ? 'min-h-screen bg-gray-950 text-gray-100'
+          : 'min-h-screen bg-gradient-to-b from-rose-50 via-white to-sky-50 text-slate-900'
+      }
+    >
+      <div className="container mx-auto px-4 py-6 max-w-6xl">
+        <div className="flex items-center justify-between mb-6">
           <div className="text-left">
-            <h1 className="text-4xl font-bold mb-1 bg-gradient-to-r from-blue-400 to-cyan-500 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold mb-1 bg-gradient-to-r from-rose-400 via-fuchsia-500 to-sky-500 bg-clip-text text-transparent">
               Generador de Contenido con IA
             </h1>
-            <p className="text-gray-400">
+            <p className={isDarkMode ? 'text-gray-400' : 'text-slate-600'}>
               Sube una imagen, añade información y genera contenido optimizado para Instagram y Marketplace
             </p>
           </div>
-          <button
-            onClick={handleSignOut}
-            className="text-sm text-gray-300 hover:text-white border border-gray-700 px-3 py-1.5 rounded-lg transition-colors"
-          >
-            Cerrar sesión
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsDarkMode((prev) => !prev)}
+              className={
+                isDarkMode
+                  ? 'flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border border-gray-700 text-gray-200 hover:bg-gray-800 transition-colors'
+                  : 'flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 transition-colors'
+              }
+            >
+              {isDarkMode ? (
+                <>
+                  <Sun className="h-3 w-3" />
+                  Modo día
+                </>
+              ) : (
+                <>
+                  <Moon className="h-3 w-3" />
+                  Modo noche
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handleSignOut}
+              className={
+                isDarkMode
+                  ? 'text-sm text-gray-300 hover:text-white border border-gray-700 px-3 py-1.5 rounded-lg transition-colors'
+                  : 'text-sm text-rose-700 hover:text-rose-900 border border-rose-200 px-3 py-1.5 rounded-lg transition-colors bg-white'
+              }
+            >
+              Cerrar sesión
+            </button>
+          </div>
         </div>
 
         {appError && (
@@ -439,9 +488,15 @@ function App() {
           </div>
         )}
 
-        <div className="grid lg:grid-cols-2 gap-8">
-          <div className="space-y-6">
-            <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <div className="grid lg:grid-cols-2 gap-8 lg:h-[calc(100vh-7rem)]">
+          <div className="space-y-6 lg:overflow-y-auto lg:pr-2">
+            <div
+              className={
+                isDarkMode
+                  ? 'bg-gray-900 rounded-xl p-6 border border-gray-800'
+                  : 'bg-white rounded-xl p-6 border border-rose-100 shadow-sm'
+              }
+            >
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-blue-400" />
                 Carga de Imagen
@@ -453,7 +508,13 @@ function App() {
               />
             </div>
 
-            <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+            <div
+              className={
+                isDarkMode
+                  ? 'bg-gray-900 rounded-xl p-6 border border-gray-800'
+                  : 'bg-white rounded-xl p-6 border border-rose-100 shadow-sm'
+              }
+            >
               <h2 className="text-xl font-semibold mb-4">Información Adicional</h2>
               <div className="space-y-4">
                 <TextInput value={text} onChange={setText} />
@@ -468,7 +529,12 @@ function App() {
             <button
               onClick={handleAnalyze}
               disabled={!selectedImage || isAnalyzing}
-              className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 disabled:from-gray-700 disabled:to-gray-700 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+              className={
+                (!selectedImage || isAnalyzing
+                  ? 'w-full bg-gray-600 cursor-not-allowed '
+                  : 'w-full bg-gradient-to-r from-rose-500 via-fuchsia-500 to-sky-500 hover:from-rose-600 hover:via-fuchsia-600 hover:to-sky-600 ') +
+                'text-white font-semibold py-3.5 rounded-full transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 shadow-md'
+              }
             >
               {isAnalyzing ? (
                 <>
@@ -484,8 +550,14 @@ function App() {
             </button>
           </div>
 
-          <div className="space-y-6">
-            <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+          <div className="space-y-6 lg:overflow-y-auto lg:pl-2">
+            <div
+              className={
+                isDarkMode
+                  ? 'bg-gray-900 rounded-xl p-6 border border-gray-800'
+                  : 'bg-white rounded-xl p-6 border border-rose-100 shadow-sm'
+              }
+            >
               <h2 className="text-xl font-semibold mb-4">Vista Previa Instagram</h2>
               {imagePreview ? (
                 <InstagramPreview
@@ -499,7 +571,13 @@ function App() {
               )}
             </div>
 
-            <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+            <div
+              className={
+                isDarkMode
+                  ? 'bg-gray-900 rounded-xl p-6 border border-gray-800'
+                  : 'bg-white rounded-xl p-6 border border-rose-100 shadow-sm'
+              }
+            >
               <h2 className="text-xl font-semibold mb-4">Vista Previa Marketplace</h2>
               {imagePreview ? (
                 <MarketplacePreview
@@ -515,6 +593,42 @@ function App() {
                 </div>
               )}
             </div>
+
+            {analysisResult && (
+              <div
+                className={
+                  isDarkMode
+                    ? 'bg-gray-900 rounded-xl p-4 border border-gray-800 flex flex-col gap-3'
+                    : 'bg-white rounded-xl p-4 border border-rose-100 flex flex-col gap-3 shadow-sm'
+                }
+              >
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleCopyToClipboard(
+                      analysisResult.caption_instagram,
+                      'Instagram'
+                    )
+                  }
+                  className="w-full bg-rose-500 hover:bg-rose-600 text-white font-medium py-2.5 rounded-full text-sm transition-colors"
+                >
+                  Copiar caption de Instagram
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleCopyToClipboard(
+                      `Título: ${analysisResult.titulo_marketplace}\nPrecio: ${analysisResult.precio_sugerido}\nCategoría: ${analysisResult.categoria}\n\nDescripción:\n${analysisResult.descripcion_detallada}`,
+                      'Marketplace'
+                    )
+                  }
+                  className="w-full bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-medium py-2.5 rounded-full text-sm transition-colors"
+                >
+                  Copiar ficha de Marketplace
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
