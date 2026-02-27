@@ -42,35 +42,11 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // Enforce authenticated requests (user JWT).
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return jsonError(401, "Unauthorized");
-    }
-
     const { imageBase64, text, audioUrl }: RequestBody = await req.json();
 
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) {
       return jsonError(500, "GEMINI_API_KEY not configured");
-    }
-
-    // Validate the token with Supabase Auth
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-      return jsonError(500, "Supabase env not configured (SUPABASE_URL / SUPABASE_ANON_KEY)");
-    }
-
-    const userRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-      headers: {
-        Authorization: authHeader,
-        apikey: SUPABASE_ANON_KEY,
-      },
-    });
-
-    if (!userRes.ok) {
-      return jsonError(401, "Unauthorized");
     }
 
     let combinedText = text;
