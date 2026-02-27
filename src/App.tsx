@@ -231,6 +231,7 @@ function App() {
       setAnalysisResult(result);
 
       await supabase.from('posts').insert({
+        user_id: session.user.id,
         image_url: imagePath,
         user_text: text,
         audio_url: audioPath,
