@@ -159,6 +159,19 @@ function App() {
     });
   };
 
+  const decodeJwtPayload = (jwt: string): any | null => {
+    try {
+      const parts = jwt.split('.');
+      if (parts.length < 2) return null;
+      const base64Url = parts[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+      return JSON.parse(atob(padded));
+    } catch {
+      return null;
+    }
+  };
+
   const handleAnalyze = async () => {
     if (!selectedImage) {
       setAppError('Por favor, selecciona una imagen primero.');
@@ -167,6 +180,24 @@ function App() {
 
     if (!session) {
       setAppError('Debes iniciar sesión para generar contenido.');
+      return;
+    }
+
+    const jwtPayload = decodeJwtPayload(session.access_token);
+    const expectedIss = `${import.meta.env.VITE_SUPABASE_URL}/auth/v1`;
+    const tokenIss = jwtPayload?.iss;
+    const tokenExp = typeof jwtPayload?.exp === 'number' ? jwtPayload.exp : null;
+    const now = Math.floor(Date.now() / 1000);
+    if (tokenExp && tokenExp < now) {
+      setAppError('Tu sesión expiró. Cierra sesión e inicia sesión de nuevo.');
+      return;
+    }
+    if (tokenIss && tokenIss !== expectedIss) {
+      setAppError(
+        `Tu sesión pertenece a otro proyecto Supabase. Esperado: ${expectedIss}. Recibido: ${tokenIss}. ` +
+          `Solución: borra el almacenamiento del sitio (localStorage) y vuelve a iniciar sesión, ` +
+          `y confirma que Vercel tiene los env vars correctos para Production/Preview.`
+      );
       return;
     }
 
