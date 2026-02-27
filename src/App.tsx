@@ -224,7 +224,18 @@ function App() {
       });
 
       if (!response.ok) {
-        throw new Error('Error al analizar la imagen');
+        const raw = await response.text();
+        let details = raw || 'Respuesta vacía del servidor';
+        try {
+          const parsed = JSON.parse(raw);
+          details =
+            parsed?.error ||
+            parsed?.message ||
+            (typeof parsed === 'string' ? parsed : JSON.stringify(parsed));
+        } catch {
+          // keep raw
+        }
+        throw new Error(`Error al analizar la imagen (${response.status}): ${details}`);
       }
 
       const result: AnalysisResult = await response.json();

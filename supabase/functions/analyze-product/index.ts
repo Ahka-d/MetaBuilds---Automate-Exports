@@ -1,5 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
+// For local TypeScript tooling only (Supabase Edge Runtime provides `Deno`).
+declare const Deno: any;
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
@@ -20,6 +23,16 @@ interface GeminiResponse {
   descripcion_detallada: string;
 }
 
+function jsonError(status: number, message: string, extra?: Record<string, unknown>) {
+  return new Response(JSON.stringify({ error: message, ...(extra ?? {}) }), {
+    status,
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+    },
+  });
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -32,27 +45,21 @@ Deno.serve(async (req: Request) => {
     // Enforce authenticated requests (user JWT).
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      });
+      return jsonError(401, "Unauthorized");
     }
 
     const { imageBase64, text, audioUrl }: RequestBody = await req.json();
 
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY not configured");
+      return jsonError(500, "GEMINI_API_KEY not configured");
     }
 
     // Validate the token with Supabase Auth
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-      throw new Error("Supabase env not configured (SUPABASE_URL / SUPABASE_ANON_KEY)");
+      return jsonError(500, "Supabase env not configured (SUPABASE_URL / SUPABASE_ANON_KEY)");
     }
 
     const userRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
@@ -63,13 +70,7 @@ Deno.serve(async (req: Request) => {
     });
 
     if (!userRes.ok) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      });
+      return jsonError(401, "Unauthorized");
     }
 
     let combinedText = text;
@@ -176,22 +177,33 @@ Responde SOLO con el JSON, sin texto adicional.`;
     if (!geminiResponse.ok) {
       const errorData = await geminiResponse.text();
       console.error("Gemini API error:", errorData);
-      throw new Error(`Gemini API error: ${geminiResponse.status}`);
+      return jsonError(502, `Gemini API error: ${geminiResponse.status}`, {
+        details: errorData.slice(0, 800),
+      });
     }
 
     const geminiData = await geminiResponse.json();
     const responseText = geminiData.candidates[0]?.content?.parts[0]?.text;
 
     if (!responseText) {
-      throw new Error("No response from Gemini");
+      return jsonError(502, "No response from Gemini");
     }
 
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      throw new Error("Could not extract JSON from Gemini response");
+      return jsonError(502, "Could not extract JSON from Gemini response", {
+        details: responseText.slice(0, 800),
+      });
     }
 
-    const parsedResponse: GeminiResponse = JSON.parse(jsonMatch[0]);
+    let parsedResponse: GeminiResponse;
+    try {
+      parsedResponse = JSON.parse(jsonMatch[0]);
+    } catch {
+      return jsonError(502, "Invalid JSON returned by Gemini", {
+        details: jsonMatch[0].slice(0, 800),
+      });
+    }
 
     return new Response(JSON.stringify(parsedResponse), {
       headers: {
@@ -201,17 +213,6 @@ Responde SOLO con el JSON, sin texto adicional.`;
     });
   } catch (error) {
     console.error("Error:", error);
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : "Unknown error",
-      }),
-      {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    return jsonError(500, error instanceof Error ? error.message : "Unknown error");
   }
 });
