@@ -119,7 +119,7 @@ Genera un JSON con los siguientes campos:
 - titulo_marketplace: Un título conciso para marketplace (máximo 60 caracteres)
 - precio_sugerido: Un precio sugerido en dólares (solo el número, ej: "29.99")
 - categoria: La categoría del producto (ej: "Electrónica", "Ropa", "Hogar", etc.)
-- descripcion_detallada: Una descripción detallada del producto para marketplace (150-200 palabras)
+- descripcion_detallada: Una descripción detallada del producto para marketplace (100-200 palabras)
 
 Responde SOLO con el JSON, sin texto adicional.`;
 
