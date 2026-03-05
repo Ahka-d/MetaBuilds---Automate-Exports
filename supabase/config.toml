@@ -357,9 +357,6 @@ enabled = true
 # `oneshot` — fallback mode if hot reload causes issues (e.g. in large repos or with symlinks).
 policy = "per_worker"
 
-[functions.analyze-product]
-verify_jwt = false
-
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 

@@ -9,6 +9,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
+
 interface RequestBody {
   imageBase64: string;
   text: string;
@@ -33,6 +36,48 @@ function jsonError(status: number, message: string, extra?: Record<string, unkno
   });
 }
 
+async function getUserFromAuthHeader(req: Request): Promise<
+  | { userId: string }
+  | { error: string; details?: string }
+> {
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const lower = authHeader.toLowerCase();
+
+  if (!lower.startsWith("bearer ")) {
+    return { error: "Missing or invalid Authorization header" };
+  }
+
+  const token = authHeader.slice(7).trim();
+
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    return { error: "Auth not configured on Edge Function" };
+  }
+
+  const userRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      apikey: SUPABASE_ANON_KEY,
+    },
+  });
+
+  if (!userRes.ok) {
+    const body = await userRes.text();
+    return {
+      error: "Invalid or expired access token",
+      details: body.slice(0, 800),
+    };
+  }
+
+  const data = await userRes.json();
+  const user = (data && ("id" in data ? data : data.user)) as { id?: string } | null;
+
+  if (!user?.id) {
+    return { error: "Could not resolve user from token" };
+  }
+
+  return { userId: user.id };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -42,6 +87,13 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    const authResult = await getUserFromAuthHeader(req);
+    if ("error" in authResult) {
+      return jsonError(401, authResult.error, authResult.details ? { details: authResult.details } : undefined);
+    }
+
+    const userId = authResult.userId;
+
     const { imageBase64, text, audioUrl }: RequestBody = await req.json();
 
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
