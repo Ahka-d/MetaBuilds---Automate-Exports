@@ -167,7 +167,7 @@ Deno.serve(async (req: Request) => {
     const prompt = `Analiza esta imagen y el siguiente texto del usuario (incluyendo, si está presente, una descripción por voz transcrita): "${combinedText}".
 
 Genera un JSON con los siguientes campos:
-- caption_instagram: Un caption atractivo para Instagram, estructurado de forma donde se desglosen las características del producto (tabula en cada característica) y se inviten a comprar (máximo 150 caracteres, con emojis relevantes)
+- caption_instagram: Un caption atractivo para Instagram, estructurado de forma donde se desglosen las características del producto (tabula en cada característica) y se inviten a comprar (máximo 150 caracteres minimo 75, con emojis relevantes)
 - titulo_marketplace: Un título conciso para marketplace (máximo 60 caracteres)
 - precio_sugerido: Un precio sugerido en dólares (solo el número, ej: "29.99")
 - categoria: La categoría del producto (ej: "Electrónica", "Ropa", "Hogar", etc.)
